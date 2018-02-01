@@ -6,7 +6,6 @@ Requirements: Python 2.7, python-hglib
 
 import sys
 import hglib
-import re
 
 if len(sys.argv) > 1:
     try:
