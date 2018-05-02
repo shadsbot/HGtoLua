@@ -1,7 +1,7 @@
 """
 HG MetaData Extractor
 Last Updated: 5/2/2018
-Requirements: Python 2.7, python-hglib
+Requirements: Python 2.7
 """
 
 import os
