@@ -13,7 +13,8 @@ Honestly this won't be relevant for most people. The most this might be useful i
 ### Arguments
 
   - Path to folder containing .hg folder, string
-  - Path to output file name and type, string
+  - Path to output the resulting file
+  - Output file name and extension
   
 ### Example Use
 
@@ -21,6 +22,6 @@ Honestly this won't be relevant for most people. The most this might be useful i
 
 default parameters used, assumes current directory for both inputs
 
-`python trhg.py "C:\Users\colin\Documents\TR" "C:\Users\colin\Desktop\output.txt"`
+`python trhg.py "C:\Users\colin\Documents\TR" "C:\Users\colin\Desktop\" "output.lua"`
 
 uses specified paths over current directory unless otherwise stated (".")
