@@ -1,56 +1,45 @@
 """
 HG MetaData Extractor
-Last Updated: 1/31/2018
+Last Updated: 5/2/2018
 Requirements: Python 2.7, python-hglib
-
-TODO:
-    - Remove dependency on hglib
 """
 
 import os
 import sys
 import subprocess
-import hglib
 import json
 import datetime
 
+# Attempt to find an HG repo
 if len(sys.argv) > 1:
-    try:
-        repo = hglib.open(sys.argv[1])
-    except:
-        print("There was an error opening that repo. Does it exist?")
-        print(sys.argv[1])
-        raise SystemExit
-else:
-    try:
-        repo = hglib.open('.')
-    except:
-        print("No repo specified and none in working directory. Hint: This script accepts one parameter to point to the hg repo.")
-        raise SystemExit
+    path = sys.argv[1]
+    if not path[-1:] == '/':
+        path = path + "/"
+    if not os.path.isfile(path + ".hg/hgrc"):
+        print("err: Could not find an hg repo at " + path + ".hg/hgrc")
+        exit(1)
 
+# Create a backup of working dir, move to "path"
 wd = os.getcwd()
-os.chdir(sys.argv[1])
+os.chdir(path)
 
-# Get current changeset, revision, and branch, strip the \n
-data = repo.rawcommand(['id','-nib'])[:-1].split(' ')
-# And the tags
-data.append(repo.rawcommand(['id','-t'])[:-1] )
+data = subprocess.check_output(['hg id -nib '], shell=True).split(' ')
+data[2] = data[2].replace('\n','')
 
 # Apparently log can output in JSON format
 try:
-    logdata = subprocess.check_output(['hg log -Tjson -r ' + data[1].replace('+','')], shell=True)
+    logdata = subprocess.check_output(['hg log -Tjson -r ' + data[0].replace('+','')], shell=True)
 except subprocess.CalledProcessError as g:
     print("e: ", g.returncode, g.output, data[1])
 
-# Debug
-# print(logdata)
-
 logdata = json.loads(logdata.replace('\n',''))[0]
 
-# author, date, and summary
+# tags, author, date, summary, and bookmarks
+data.append(logdata['tags'])
 data.append(logdata['user'])
 data.append(datetime.datetime.fromtimestamp(logdata['date'][0]).strftime('%Y/%m/%d'))
 data.append(logdata['desc'].replace('"','\\"'))
+data.append(logdata['bookmarks'])
 
 # Where do we actually stash this file
 os.chdir(wd) # Preserve relative paths
@@ -61,6 +50,10 @@ if len(sys.argv) > 3:
     output = sys.argv[3]
 else:
     output = "cl_versioninfo.lua" # Default name
+
+# Tags and bookmarks are still arrays
+data[7] = " ".join(data[7])
+data[3] = " ".join(data[3])
 
 f = open(output,'w') # overwrite file if exist
 f.write("""--[[
@@ -74,6 +67,7 @@ GM.RevNumber = "{1}"
 GM.ChangeDate = "{5}"
 GM.RevAuthor = "{4}"
 GM.RevTags = "{3}"
+GM.Bookmarks = "{7}"
 GM.RevSummary = "{6}"
 """.format(*data) )
 

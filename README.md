@@ -4,7 +4,7 @@ Take that HG Repository and make it parseable for GMod... for whatever reason
 ## Requirements
 
 - Python 2.X
-- `python-hglib`
+- hg
 
 ### Use Case
 
