@@ -2,10 +2,17 @@
 HG MetaData Extractor
 Last Updated: 1/31/2018
 Requirements: Python 2.7, python-hglib
+
+TODO:
+    - Remove dependency on hglib
 """
 
+import os
 import sys
+import subprocess
 import hglib
+import json
+import datetime
 
 if len(sys.argv) > 1:
     try:
@@ -13,29 +20,47 @@ if len(sys.argv) > 1:
     except:
         print("There was an error opening that repo. Does it exist?")
         print(sys.argv[1])
+        raise SystemExit
 else:
     try:
         repo = hglib.open('.')
     except:
         print("No repo specified and none in working directory. Hint: This script accepts one parameter to point to the hg repo.")
+        raise SystemExit
+
+wd = os.getcwd()
+os.chdir(sys.argv[1])
 
 # Get current changeset, revision, and branch, strip the \n
 data = repo.rawcommand(['id','-nib'])[:-1].split(' ')
 # And the tags
 data.append(repo.rawcommand(['id','-t'])[:-1] )
 
-# Apparently the log can print out everything and make it perfect for parsing??
-logdata = repo.rawcommand(['log','--template','{desc|firstline}\n{date|shortdate}\n{author|user}','-r',data[1]]).split('\n')
+# Apparently log can output in JSON format
+try:
+    logdata = subprocess.check_output(['hg log -Tjson -r ' + data[1].replace('+','')], shell=True)
+except subprocess.CalledProcessError as g:
+    print("e: ", g.returncode, g.output, data[1])
 
-data.append(logdata[2]) # author
-data.append(logdata[1]) # date
-data.append(logdata[0]) # summary
+# Debug
+# print(logdata)
+
+logdata = json.loads(logdata.replace('\n',''))[0]
+
+# author, date, and summary
+data.append(logdata['user'])
+data.append(datetime.datetime.fromtimestamp(logdata['date'][0]).strftime('%Y/%m/%d'))
+data.append(logdata['desc'].replace('"','\\"'))
 
 # Where do we actually stash this file
+os.chdir(wd) # Preserve relative paths
 if len(sys.argv) > 2:
-    output = sys.argv[2]
+    os.chdir(sys.argv[2])
+# What to name this file
+if len(sys.argv) > 3:
+    output = sys.argv[3]
 else:
-    output = 'cl_versioninfo.lua'
+    output = "cl_versioninfo.lua" # Default name
 
 f = open(output,'w') # overwrite file if exist
 f.write("""--[[
