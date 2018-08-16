@@ -1,6 +1,6 @@
 """
 HG MetaData Extractor
-Last Updated: 5/2/2018
+Last Updated: 8/13/2018
 Requirements: Python 2.7
 """
 
