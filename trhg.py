@@ -9,6 +9,7 @@ import sys
 import subprocess
 import json
 import datetime
+import platform
 
 # Attempt to find an HG repo
 if len(sys.argv) > 1:
@@ -22,13 +23,19 @@ if len(sys.argv) > 1:
 # Create a backup of working dir, move to "path"
 wd = os.getcwd()
 os.chdir(path)
+if (platform.system() == "Linux"):
+    data = subprocess.check_output(['hg id -nib '], shell=True).split(' ')
+else:
+    data = subprocess.check_output(['hg', 'id', '-nib'], shell=True).split(' ')
 
-data = subprocess.check_output(['hg id -nib '], shell=True).split(' ')
 data[2] = data[2].replace('\n','')
 
 # Apparently log can output in JSON format
 try:
-    logdata = subprocess.check_output(['hg log -Tjson -r ' + data[0].replace('+','')], shell=True)
+    if (platform.system() == "Linux"):
+        logdata = subprocess.check_output(['hg log -Tjson -r ' + data[0].replace('+','')], shell=True)
+    else:
+        logdata = subprocess.check_output(['hg', 'log', '-Tjson', '-r' + data[0].replace('+','')], shell=True)
 except subprocess.CalledProcessError as g:
     print("e: ", g.returncode, g.output, data[1])
 
@@ -37,7 +44,7 @@ logdata = json.loads(logdata.replace('\n',''))[0]
 # tags, author, date, summary, and bookmarks
 data.append(logdata['tags'])
 data.append(logdata['user'])
-data.append(datetime.datetime.fromtimestamp(logdata['date'][0]).strftime('%Y/%m/%d'))
+data.append(datetime.datetime.fromtimestamp(logdata['date'][0]).strftime('%Y-%m-%d'))
 data.append(logdata['desc'].replace('"','\\"'))
 data.append(logdata['bookmarks'])
 
@@ -54,6 +61,12 @@ else:
 # Tags and bookmarks are still arrays
 data[7] = " ".join(data[7])
 data[3] = " ".join(data[3])
+
+# Stop revision summary at 160 chars or newline, whichever comes first
+newlineLocation = data[6].find("\n")
+if (newlineLocation != -1):
+    data[6] = data[6][:newlineLocation]
+data[6] = data[6][:160]
 
 f = open(output,'w') # overwrite file if exist
 f.write("""--[[
